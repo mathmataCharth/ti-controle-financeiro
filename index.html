@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- v4 --><title>Charth – Controle de Equipamentos TI</title>
+<!-- v5 --><title>Charth – Controle de Equipamentos TI</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -373,7 +373,13 @@ async function loadData() {
 
 function buildDashboard() {
   // ── KPIs parcelas ──
+  // DEBUG
+  console.log('parcelas count:', parcelasData.length);
+  console.log('p[0] keys:', Object.keys(parcelasData[0]));
+  console.log('p[0][Valor (R$)]:', JSON.stringify(parcelasData[0]['Valor (R$)']));
+  console.log('toNum result:', toNum(parcelasData[0]['Valor (R$)']));
   const total   = parcelasData.reduce((s,r) => s + toNum(r['Valor (R$)'] || r['Valor']), 0);
+  console.log('total:', total);
   const pago    = parcelasData.filter(r => (r['Status']||'').toUpperCase()==='PAGO')
                               .reduce((s,r) => s + toNum(r['Valor Pago (R$)'] || r['Valor Pago']), 0);
   const apagar  = parcelasData.filter(r => (r['Status']||'').toUpperCase()==='A PAGAR')
