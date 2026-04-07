@@ -356,11 +356,7 @@ async function loadData() {
   document.getElementById('error').style.display   = 'none';
   document.getElementById('app').style.display     = 'none';
   try {
-    let textP, textParc;
-    
-      textP = await fetchCSV(CSV_PEDIDOS);
-    try {
-      textParc = await fetchCSV(CSV_PARCELAS);
+    const [textP, textParc] = await Promise.all([fetchCSV(CSV_PEDIDOS), fetchCSV(CSV_PARCELAS)]);
     pedidosData  = parseCSV(textP);
     parcelasData = parseCSV(textParc);
     document.getElementById('lastUpdate').textContent =
