@@ -311,7 +311,17 @@ const R$ = v => {
   const n = parseFloat(String(v).replace(/[R$\s.]/g,'').replace(',','.')) || 0;
   return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
 };
-const toNum = v => parseFloat(String(v).replace(/[R$\s.]/g,'').replace(',','.')) || 0;
+const toNum = v => {
+  // Handle Brazilian format: "R$ 1.838,00" → 1838.00
+  let s = String(v)
+    .replace(/R\$\s*/g, '')   // remove R$
+    .trim();
+  // If has comma: pt-BR format (1.838,00)
+  if (s.includes(',')) {
+    s = s.replace(/\./g, '').replace(',', '.');
+  }
+  return parseFloat(s) || 0;
+};
 
 function parseCSV(text) {
   const lines = text.trim().split('\n');
