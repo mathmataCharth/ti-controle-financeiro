@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Charth – Controle de Equipamentos TI</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg:        #0f1117;
+    --bg2:       #181c27;
+    --bg3:       #1e2333;
+    --border:    rgba(255,255,255,0.07);
+    --text:      #e8eaf0;
+    --muted:     #7a8099;
+    --accent:    #4f8ef7;
+    --green:     #34c77b;
+    --orange:    #f5a623;
+    --red:       #f25757;
+    --yellow:    #f5d020;
+    --orange25:  rgba(245,166,35,0.15);
+    --blue25:    rgba(79,142,247,0.15);
+    --gray25:    rgba(120,130,155,0.15);
+    --green25:   rgba(52,199,123,0.15);
+    --red25:     rgba(242,87,87,0.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-mark {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500;
+    color: #fff;
+  }
+  .logo-text { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
+  .logo-sub  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .last-update { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .btn-refresh {
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); border-radius: 6px; padding: 6px 14px;
+    font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-refresh:hover { background: var(--accent); border-color: var(--accent); }
+
+  /* ── Loading / Error ── */
+  .state-screen {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 60vh; gap: 16px; color: var(--muted);
+  }
+  .spinner {
+    width: 36px; height: 36px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Main layout ── */
+  .main { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+
+  /* ── KPI cards ── */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .kpi {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px;
+    transition: border-color .2s;
+  }
+  .kpi:hover { border-color: rgba(255,255,255,0.15); }
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+  .kpi-val   { font-size: 26px; font-weight: 600; letter-spacing: -0.5px; line-height: 1; }
+  .kpi-sub   { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .kpi-bar   { height: 3px; border-radius: 2px; margin-top: 12px; background: var(--border); overflow: hidden; }
+  .kpi-bar-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+
+  /* ── Charts row ── */
+  .charts-row { display: grid; grid-template-columns: 1fr 1.6fr; gap: 16px; margin-bottom: 24px; }
+  .card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  .card-title {
+    font-size: 12px; font-weight: 500; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .5px; margin-bottom: 16px;
+  }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+  .tab {
+    padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 500;
+    cursor: pointer; color: var(--muted); border: 1px solid transparent;
+    transition: all .15s;
+  }
+  .tab.active { background: var(--bg3); border-color: var(--border); color: var(--text); }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    padding: 8px 12px; text-align: left; color: var(--muted);
+    font-weight: 500; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .4px; border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody tr:last-child { border-bottom: none; }
+  td { padding: 9px 12px; vertical-align: middle; }
+  td.mono { font-family: 'DM Mono', monospace; font-size: 11px; }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 10px; font-weight: 600; letter-spacing: .3px; white-space: nowrap;
+  }
+  .badge-pago    { background: var(--green25);  color: var(--green);  }
+  .badge-proximo { background: var(--orange25); color: var(--orange); }
+  .badge-apagar  { background: var(--red25);    color: var(--red);    }
+  .badge-cat     { background: var(--blue25);   color: var(--accent); }
+
+  /* ── Year row separators in parcelas ── */
+  .yr-2025 { background: rgba(245,166,35,0.04); }
+  .yr-2026 { background: rgba(79,142,247,0.04); }
+  .yr-2027 { background: rgba(120,130,155,0.04); }
+  .yr-sep td { border-top: 1px solid; }
+  .yr-sep-2025 td { border-top-color: rgba(245,166,35,0.4) !important; }
+  .yr-sep-2026 td { border-top-color: rgba(79,142,247,0.4)  !important; }
+  .yr-sep-2027 td { border-top-color: rgba(120,130,155,0.4) !important; }
+  .yr-label {
+    display: inline-block; padding: 1px 7px; border-radius: 4px;
+    font-size: 10px; font-weight: 600; margin-right: 4px;
+  }
+  .yr-2025-label { background: rgba(245,166,35,0.2); color: var(--orange); }
+  .yr-2026-label { background: rgba(79,142,247,0.2);  color: var(--accent); }
+  .yr-2027-label { background: rgba(120,130,155,0.2); color: #9ba3bf; }
+
+  /* ── Legend ── */
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .legend-dot  { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+  /* ── Tab panels ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── Summary footer in parcelas ── */
+  .parc-footer {
+    display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-top: 20px;
+  }
+  .parc-footer-item {
+    background: var(--bg3); border-radius: 8px; padding: 12px 14px;
+    border: 1px solid var(--border);
+  }
+  .parc-footer-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+  .parc-footer-val   { font-size: 16px; font-weight: 600; }
+
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(2,1fr); }
+    .charts-row { grid-template-columns: 1fr; }
+    .main { padding: 16px; }
+    .header { padding: 14px 16px; }
+    .parc-footer { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-mark">TI</div>
+    <div>
+      <div class="logo-text">Charth — Controle de TI</div>
+      <div class="logo-sub">Equipamentos · FP Infotech</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-update" id="lastUpdate">carregando...</span>
+    <button class="btn-refresh" onclick="loadData()">↻ Atualizar</button>
+  </div>
+</div>
+
+<div id="loading" class="state-screen">
+  <div class="spinner"></div>
+  <span>Carregando dados do Google Sheets...</span>
+</div>
+
+<div id="error" class="state-screen" style="display:none">
+  <span style="font-size:24px">⚠</span>
+  <span id="errorMsg">Erro ao carregar dados.</span>
+  <button class="btn-refresh" onclick="loadData()">Tentar novamente</button>
+</div>
+
+<div id="app" style="display:none">
+<div class="main">
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-label">Total contrato</div>
+      <div class="kpi-val" id="kpi-total">—</div>
+      <div class="kpi-sub" id="kpi-total-sub">—</div>
+      <div class="kpi-bar"><div class="kpi-bar-fill" id="kpi-bar-prog" style="background:var(--accent);width:0%"></div></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Total pago</div>
+      <div class="kpi-val" style="color:var(--green)" id="kpi-pago">—</div>
+      <div class="kpi-sub" id="kpi-pago-sub">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Próximo vencimento</div>
+      <div class="kpi-val" style="color:var(--orange)" id="kpi-prox">—</div>
+      <div class="kpi-sub" id="kpi-prox-sub">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">A pagar</div>
+      <div class="kpi-val" style="color:var(--red)" id="kpi-apagar">—</div>
+      <div class="kpi-sub" id="kpi-apagar-sub">—</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-title">Por categoria</div>
+      <div class="legend" id="leg-cat"></div>
+      <div style="position:relative;height:220px"><canvas id="chartCat"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Valor mensal adquirido</div>
+      <div style="position:relative;height:260px"><canvas id="chartMes"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="card">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('pedidos',this)">Pedidos</div>
+      <div class="tab" onclick="switchTab('parcelas',this)">Parcelas</div>
+    </div>
+
+    <!-- Pedidos panel -->
+    <div id="panel-pedidos" class="panel active">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <input type="text" id="searchPedidos" placeholder="Buscar equipamento..."
+          oninput="renderPedidos()"
+          style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:7px 12px;font-family:'DM Sans',sans-serif;font-size:12px;width:260px;outline:none">
+        <div style="display:flex;gap:6px" id="cat-filters"></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Entrada</th><th>Equipamento</th>
+              <th>Qtd</th><th>Valor Unit.</th><th>Total</th>
+              <th>Categoria</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-pedidos"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Parcelas panel -->
+    <div id="panel-parcelas" class="panel">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Parc.</th><th>Ano</th><th>Vencimento</th>
+              <th>Valor</th><th>Status</th><th>Data Pgto</th><th>Valor Pago</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-parcelas"></tbody>
+        </table>
+      </div>
+      <div class="parc-footer" id="parc-footer"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+const CSV_PEDIDOS  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRPE8-mFibXzZwynk1I0EQ8imsuBSL7zvYekCkMpNgw1DD9pWKdrq76ofY-MLRAusxccwzb6mTOm4HH/pub?gid=0&single=true&output=csv';
+const CSV_PARCELAS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRPE8-mFibXzZwynk1I0EQ8imsuBSL7zvYekCkMpNgw1DD9pWKdrq76ofY-MLRAusxccwzb6mTOm4HH/pub?gid=1548931793&single=true&output=csv';
+
+let pedidosData = [], parcelasData = [];
+let activeFilter = 'Todos';
+let chartCat, chartMes;
+
+const R$ = v => {
+  const n = parseFloat(String(v).replace(/[R$\s.]/g,'').replace(',','.')) || 0;
+  return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+};
+const toNum = v => parseFloat(String(v).replace(/[R$\s.]/g,'').replace(',','.')) || 0;
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
+  return lines.slice(1).map(line => {
+    const cols = [];
+    let cur = '', inQ = false;
+    for (const ch of line) {
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    cols.push(cur.trim());
+    const obj = {};
+    headers.forEach((h,i) => obj[h] = (cols[i]||'').replace(/^"|"$/g,''));
+    return obj;
+  }).filter(r => Object.values(r).some(v => v !== ''));
+}
+
+async function fetchCSV(url) {
+  url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.text();
+}
+
+async function loadData() {
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('error').style.display   = 'none';
+  document.getElementById('app').style.display     = 'none';
+  try {
+    const [textP, textParc] = await Promise.all([fetchCSV(CSV_PEDIDOS), fetchCSV(CSV_PARCELAS)]);
+    pedidosData  = parseCSV(textP);
+    parcelasData = parseCSV(textParc);
+    document.getElementById('lastUpdate').textContent =
+      'Atualizado: ' + new Date().toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    buildDashboard();
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display     = 'block';
+  } catch(e) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display   = 'flex';
+    document.getElementById('errorMsg').textContent  = 'Erro: ' + e.message;
+  }
+}
+
+function buildDashboard() {
+  // ── KPIs parcelas ──
+  const total   = parcelasData.reduce((s,r) => s + toNum(r['Valor (R$)'] || r['Valor']), 0);
+  const pago    = parcelasData.filter(r => (r['Status']||'').toUpperCase()==='PAGO')
+                              .reduce((s,r) => s + toNum(r['Valor Pago (R$)'] || r['Valor Pago']), 0);
+  const apagar  = parcelasData.filter(r => (r['Status']||'').toUpperCase()==='A PAGAR')
+                              .reduce((s,r) => s + toNum(r['Valor (R$)'] || r['Valor']), 0);
+  const proximo = parcelasData.find(r => (r['Status']||'').toUpperCase()==='PROXIMO');
+  const nPagas  = parcelasData.filter(r => (r['Status']||'').toUpperCase()==='PAGO').length;
+  const nTotal  = parcelasData.length;
+  const pct     = total > 0 ? (pago/total*100).toFixed(1) : 0;
+
+  document.getElementById('kpi-total').textContent     = R$(total);
+  document.getElementById('kpi-total-sub').textContent = nTotal + ' parcelas · ' + pct + '% pago';
+  document.getElementById('kpi-bar-prog').style.width  = pct + '%';
+  document.getElementById('kpi-pago').textContent      = R$(pago);
+  document.getElementById('kpi-pago-sub').textContent  = nPagas + ' parcelas quitadas';
+  document.getElementById('kpi-prox').textContent      = proximo ? R$(proximo['Valor (R$)'] || proximo['Valor']) : '—';
+  document.getElementById('kpi-prox-sub').textContent  = proximo ? (proximo['Vencimento'] || '') : '—';
+  document.getElementById('kpi-apagar').textContent    = R$(apagar);
+  const nApagar = parcelasData.filter(r => (r['Status']||'').toUpperCase()==='A PAGAR').length;
+  document.getElementById('kpi-apagar-sub').textContent = nApagar + ' parcelas restantes';
+
+  // ── Category chart ──
+  const catMap = {};
+  pedidosData.forEach(r => {
+    const cat = r['Categoria'] || 'Outros';
+    const tot = toNum(r['Total (R$)'] || r['Total']);
+    if (tot <= 0) return;
+    catMap[cat] = (catMap[cat]||0) + tot;
+  });
+  const catColors = {
+    'Notebook':'#4f8ef7','Monitor':'#34c77b','Desktop':'#f5a623',
+    'Memória':'#e879f9','Manutenção':'#a78bfa','Acessório':'#7a8099','Outros':'#555'
+  };
+  const catLabels = Object.keys(catMap);
+  const catVals   = catLabels.map(k => catMap[k]);
+  const catColArr = catLabels.map(k => catColors[k] || '#7a8099');
+
+  // Legend
+  const legEl = document.getElementById('leg-cat');
+  legEl.innerHTML = catLabels.map((l,i) =>
+    `<div class="legend-item"><span class="legend-dot" style="background:${catColArr[i]}"></span>${l} ${R$(catVals[i])}</div>`
+  ).join('');
+
+  if (chartCat) chartCat.destroy();
+  chartCat = new Chart(document.getElementById('chartCat'), {
+    type: 'doughnut',
+    data: { labels: catLabels, datasets: [{ data: catVals, backgroundColor: catColArr, borderWidth: 2, borderColor: '#181c27' }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+               cutout: '65%' }
+  });
+
+  // ── Monthly bar chart ──
+  const mesMap = {};
+  pedidosData.forEach(r => {
+    const d = r['Data Entrada'] || '';
+    const tot = toNum(r['Total (R$)'] || r['Total']);
+    if (!d || tot <= 0) return;
+    const parts = d.split('/');
+    if (parts.length < 3) return;
+    const key = parts[1].padStart(2,'0') + '/' + parts[2].slice(-2);
+    mesMap[key] = (mesMap[key]||0) + tot;
+  });
+  const mesKeys = Object.keys(mesMap).sort((a,b) => {
+    const [ma,ya] = a.split('/'); const [mb,yb] = b.split('/');
+    return (+ya*100 + +ma) - (+yb*100 + +mb);
+  });
+  const mesVals = mesKeys.map(k => mesMap[k]);
+  const mesColors = mesVals.map(v => v > 15000 ? '#f25757' : v > 7000 ? '#f5a623' : '#4f8ef7');
+
+  if (chartMes) chartMes.destroy();
+  chartMes = new Chart(document.getElementById('chartMes'), {
+    type: 'bar',
+    data: { labels: mesKeys, datasets: [{ data: mesVals, backgroundColor: mesColors, borderRadius: 4, borderWidth: 0 }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ ticks:{ color:'#7a8099', font:{size:10}, autoSkip:false, maxRotation:45 }, grid:{ color:'rgba(255,255,255,0.04)' } },
+        y:{ ticks:{ color:'#7a8099', font:{size:10}, callback: v => 'R$'+(v/1000).toFixed(0)+'k' }, grid:{ color:'rgba(255,255,255,0.06)' } }
+      }
+    }
+  });
+
+  // ── Cat filter buttons ──
+  const cats = ['Todos', ...new Set(pedidosData.map(r => r['Categoria']).filter(Boolean))];
+  document.getElementById('cat-filters').innerHTML = cats.map(c =>
+    `<button onclick="setFilter('${c}',this)" class="tab${c==='Todos'?' active':''}" style="padding:4px 10px;font-size:11px">${c}</button>`
+  ).join('');
+
+  renderPedidos();
+  renderParcelas();
+}
+
+function setFilter(cat, el) {
+  activeFilter = cat;
+  document.querySelectorAll('#cat-filters .tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderPedidos();
+}
+
+function renderPedidos() {
+  const q = (document.getElementById('searchPedidos').value || '').toLowerCase();
+  const rows = pedidosData.filter(r => {
+    const tot = toNum(r['Total (R$)'] || r['Total']);
+    if (tot <= 0 && !(r['Categoria'] === 'Manutenção')) return false;
+    const matchCat = activeFilter === 'Todos' || r['Categoria'] === activeFilter;
+    const matchQ   = !q || (r['Descrição do Equipamento'] || r['Descrição'] || '').toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+  const catColors = {
+    'Notebook':'#4f8ef7','Monitor':'#34c77b','Desktop':'#f5a623',
+    'Memória':'#e879f9','Manutenção':'#a78bfa','Acessório':'#7a8099'
+  };
+  document.getElementById('tbody-pedidos').innerHTML = rows.map(r => {
+    const cat = r['Categoria'] || '';
+    const col = catColors[cat] || '#7a8099';
+    const desc = (r['Descrição do Equipamento'] || r['Descrição'] || '').substring(0, 80);
+    const tot = toNum(r['Total (R$)'] || r['Total']);
+    return `<tr>
+      <td class="mono" style="color:var(--muted)">${r['#']||''}</td>
+      <td class="mono" style="color:var(--muted)">${r['Data Entrada']||''}</td>
+      <td style="max-width:360px">${desc}</td>
+      <td style="text-align:center">${r['Qtd']||r['Quantidade']||''}</td>
+      <td class="mono">${R$(r['Valor Unit. (R$)']||r['Valor Unit']||r['Valor Unitário']||0)}</td>
+      <td class="mono" style="font-weight:500">${tot > 0 ? R$(tot) : '—'}</td>
+      <td><span class="badge" style="background:${col}22;color:${col}">${cat}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderParcelas() {
+  const yrClass = { '2025':'yr-2025','2026':'yr-2026','2027':'yr-2027' };
+  const yrSep   = { '2025':'yr-sep-2025','2026':'yr-sep-2026','2027':'yr-sep-2027' };
+  let lastYr = '';
+  const rows = parcelasData.map(r => {
+    const ano  = (r['Ano']||'').toString().trim();
+    const stat = (r['Status']||'').toUpperCase().trim();
+    const isFirst = (ano !== lastYr);
+    lastYr = ano;
+    const badgeCls = stat==='PAGO' ? 'badge-pago' : stat==='PROXIMO' ? 'badge-proximo' : 'badge-apagar';
+    const badgeTxt = stat==='PAGO' ? 'Pago' : stat==='PROXIMO' ? 'Próximo' : 'A pagar';
+    const yrLabel  = isFirst ? `<span class="yr-label yr-${ano}-label">${ano}</span>` : '';
+    const trClass  = [yrClass[ano]||'', isFirst ? 'yr-sep '+yrSep[ano] : ''].join(' ');
+    return `<tr class="${trClass}">
+      <td class="mono" style="color:var(--muted)">${yrLabel}${r['Parc.']||''}</td>
+      <td style="color:var(--muted);font-size:11px">${ano}</td>
+      <td class="mono">${r['Vencimento']||''}</td>
+      <td class="mono" style="font-weight:500">${R$(r['Valor (R$)']||r['Valor']||0)}</td>
+      <td><span class="badge ${badgeCls}">${badgeTxt}</span></td>
+      <td class="mono" style="color:var(--muted)">${r['Data Pgto']||''}</td>
+      <td class="mono">${r['Valor Pago (R$)']||r['Valor Pago'] ? R$(r['Valor Pago (R$)']||r['Valor Pago']) : '—'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tbody-parcelas').innerHTML = rows;
+
+  // Footer
+  const total  = parcelasData.reduce((s,r) => s+toNum(r['Valor (R$)']||r['Valor']),0);
+  const pago   = parcelasData.filter(r=>(r['Status']||'').toUpperCase()==='PAGO').reduce((s,r)=>s+toNum(r['Valor Pago (R$)']||r['Valor Pago']),0);
+  const prox   = parcelasData.find(r=>(r['Status']||'').toUpperCase()==='PROXIMO');
+  const apagar = parcelasData.filter(r=>(r['Status']||'').toUpperCase()==='A PAGAR').reduce((s,r)=>s+toNum(r['Valor (R$)']||r['Valor']),0);
+  document.getElementById('parc-footer').innerHTML = `
+    <div class="parc-footer-item"><div class="parc-footer-label">Total contrato</div><div class="parc-footer-val">${R$(total)}</div></div>
+    <div class="parc-footer-item"><div class="parc-footer-label">Total pago</div><div class="parc-footer-val" style="color:var(--green)">${R$(pago)}</div></div>
+    <div class="parc-footer-item"><div class="parc-footer-label">Próximo</div><div class="parc-footer-val" style="color:var(--orange)">${prox ? R$(prox['Valor (R$)']||prox['Valor']) : '—'}</div></div>
+    <div class="parc-footer-item"><div class="parc-footer-label">A pagar</div><div class="parc-footer-val" style="color:var(--red)">${R$(apagar)}</div></div>
+  `;
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+}
+
+loadData();
+</script>
+</body>
+</html>
