@@ -332,7 +332,7 @@ function parseCSV(text) {
 }
 
 async function fetchCSV(url) {
-  url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+  url = 'https://corsproxy.io/?' + encodeURIComponent(url);
   const res = await fetch(url);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.text();
